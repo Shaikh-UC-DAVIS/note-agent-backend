@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Note Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0f;
+    --surface: #16161a;
+    --surface-hover: #1c1c22;
+    --surface-active: #222228;
+    --border: #2a2a32;
+    --border-light: #35353f;
+    --text: #ececf0;
+    --text-muted: #8888a0;
+    --text-dim: #5c5c72;
+    --accent: #c4a1ff;
+    --accent-dim: #9a6fdf;
+    --accent-glow: rgba(196,161,255,0.08);
+    --green: #7ee8a8;
+    --green-dim: rgba(126,232,168,0.12);
+    --red: #ff7b8a;
+    --red-dim: rgba(255,123,138,0.12);
+    --yellow: #ffd479;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grain overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── Auth Screen ── */
+  .auth-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  .auth-screen .bg-glow {
+    position: absolute;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(196,161,255,0.06) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 420px;
+    position: relative;
+    z-index: 1;
+    animation: fadeUp 0.5s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .auth-card .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+  }
+
+  .auth-card .subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 36px;
+  }
+
+  .auth-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .auth-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 0;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .auth-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+
+  .form-group input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0c0c0f;
+  }
+
+  .btn-primary:hover {
+    background: #d4b8ff;
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    width: auto;
+    padding: 9px 18px;
+    font-size: 13px;
+  }
+
+  .btn-ghost:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  .btn-danger {
+    background: var(--red-dim);
+    color: var(--red);
+    width: auto;
+    padding: 9px 18px;
+    font-size: 13px;
+  }
+
+  .btn-danger:hover {
+    background: rgba(255,123,138,0.2);
+  }
+
+  .error-msg {
+    color: var(--red);
+    font-size: 13px;
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  .success-msg {
+    color: var(--green);
+    font-size: 13px;
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  /* ── App Shell ── */
+  .app { display: none; min-height: 100vh; }
+  .app.visible { display: flex; }
+  .auth-screen.hidden { display: none; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-header .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  .sidebar-header .user-email {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .sidebar-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 20px 20px 8px;
+  }
+
+  .workspace-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px;
+  }
+
+  .workspace-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+
+  .workspace-item:hover { background: var(--surface-hover); color: var(--text); }
+  .workspace-item.active { background: var(--accent-glow); color: var(--accent); }
+
+  .workspace-item .ws-actions {
+    display: none;
+    margin-left: auto;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .workspace-item:hover .ws-actions { display: flex; }
+
+  .ws-action-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+
+  .ws-action-btn:hover { background: var(--surface-active); color: var(--text); }
+  .ws-action-btn.delete:hover { background: var(--red-dim); color: var(--red); }
+
+  .workspace-item .ws-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .workspace-item.active .ws-icon {
+    background: rgba(196,161,255,0.15);
+  }
+
+  .new-ws-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 16px);
+    margin: 8px 8px 0;
+    padding: 10px 12px;
+    background: none;
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .new-ws-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text-muted);
+    border-color: var(--text-dim);
+  }
+
+  .new-ws-btn .plus-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .logout-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 0;
+    transition: color 0.2s;
+  }
+
+  .logout-btn:hover { color: var(--red); }
+
+  /* ── Main Content ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .topbar {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+  }
+
+  .topbar h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+  }
+
+  .topbar .note-count {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-left: 12px;
+    font-weight: 400;
+  }
+
+  .btn-new-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #0c0c0f;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-new-note:hover {
+    background: #d4b8ff;
+    transform: translateY(-1px);
+  }
+
+  .btn-new-note .plus { font-size: 18px; line-height: 1; }
+
+  /* ── Notes List ── */
+  .notes-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+  }
+
+  .notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .note-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .note-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .note-card:hover {
+    border-color: var(--border-light);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  .note-card:hover::before { opacity: 1; }
+
+  .note-card .note-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .note-card .note-preview {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .note-card .note-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .note-card .note-status {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .status-created { background: var(--accent-glow); color: var(--accent); }
+  .status-ready { background: var(--green-dim); color: var(--green); }
+  .status-processing { background: rgba(255,212,121,0.12); color: var(--yellow); }
+  .status-error { background: var(--red-dim); color: var(--red); }
+
+  .note-card .note-date {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    text-align: center;
+  }
+
+  .empty-state .empty-icon {
+    width: 80px; height: 80px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px dashed var(--border-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    margin-bottom: 20px;
+    color: var(--text-dim);
+  }
+
+  .empty-state h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+
+  .empty-state p {
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.visible {
+    display: flex;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 560px;
+    max-height: 85vh;
+    overflow-y: auto;
+    animation: scaleIn 0.25s ease;
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .modal-header {
+    padding: 24px 28px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-header h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 20px;
+    cursor: pointer;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    transition: all 0.15s;
+  }
+
+  .modal-close:hover { background: var(--surface-hover); color: var(--text); }
+
+  .modal-body { padding: 24px 28px; }
+
+  .modal-body textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    outline: none;
+    resize: vertical;
+    min-height: 200px;
+    transition: border-color 0.2s;
+  }
+
+  .modal-body textarea:focus { border-color: var(--accent-dim); }
+
+  .modal-footer {
+    padding: 16px 28px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .modal-footer .btn-group {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+  /* ── Loading spinner ── */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin: 0 auto;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ AUTH SCREEN ════════════════ -->
+<div class="auth-screen" id="authScreen">
+  <div class="bg-glow"></div>
+  <div class="auth-card">
+    <div class="logo">Note Agent</div>
+    <div class="subtitle">Transform notes into structured knowledge</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <form id="authForm" onsubmit="handleAuth(event)">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="authEmail" required placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="authPassword" required placeholder="Min 8 characters" minlength="8">
+      </div>
+      <button type="submit" class="btn btn-primary" id="authSubmitBtn">Sign In</button>
+      <div id="authMsg"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════════ APP SHELL ════════════════ -->
+<div class="app" id="appShell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Note Agent</div>
+      <div class="user-email" id="userEmail"></div>
+    </div>
+    <div class="sidebar-section-title">Workspaces</div>
+    <div class="workspace-list" id="workspaceList"></div>
+    <button class="new-ws-btn" onclick="createWorkspace()">
+      <span class="plus-icon">+</span> New Workspace
+    </button>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">⏻ Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:baseline;">
+        <h2 id="wsTitle">Notes</h2>
+        <span class="note-count" id="noteCount"></span>
+      </div>
+      <button class="btn-new-note" onclick="openNoteModal()">
+        <span class="plus">+</span> New Note
+      </button>
+    </div>
+    <div class="notes-area" id="notesArea">
+      <div class="loading-center"><div class="spinner"></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- ════════════════ NOTE MODAL ════════════════ -->
+<div class="modal-overlay" id="noteModal" onclick="closeModalOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">New Note</h3>
+      <button class="modal-close" onclick="closeNoteModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="noteTitle" placeholder="Give your note a title" maxlength="500">
+      </div>
+      <div class="form-group">
+        <label>Content</label>
+        <textarea id="noteContent" placeholder="Write your thoughts here..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div>
+        <button class="btn-danger" id="deleteNoteBtn" style="display:none" onclick="deleteNote()">Delete</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-ghost" onclick="closeNoteModal()">Cancel</button>
+        <button class="btn btn-primary" style="width:auto;padding:10px 24px;" onclick="saveNote()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let token = localStorage.getItem('na_token');
+let userEmailStr = localStorage.getItem('na_email');
+let workspaces = [];
+let activeWs = null;
+let notes = [];
+let editingNoteId = null;
+
+// ── Auth ──────────────────────────────
+let authMode = 'login';
+
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-tab')[mode === 'login' ? 0 : 1].classList.add('active');
+  document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+  document.getElementById('authMsg').textContent = '';
+}
+
+async function handleAuth(e) {
+  e.preventDefault();
+  const email = document.getElementById('authEmail').value;
+  const password = document.getElementById('authPassword').value;
+  const msgEl = document.getElementById('authMsg');
+  msgEl.textContent = '';
+
+  try {
+    if (authMode === 'register') {
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || 'Registration failed');
+      }
+      msgEl.className = 'success-msg';
+      msgEl.textContent = 'Account created! Signing you in...';
+    }
+
+    // Login
+    const form = new URLSearchParams();
+    form.append('username', email);
+    form.append('password', password);
+    const res = await fetch(`${API}/auth/login`, { method: 'POST', body: form });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.detail || 'Invalid credentials');
+    }
+    const data = await res.json();
+    token = data.access_token;
+    userEmailStr = email;
+    localStorage.setItem('na_token', token);
+    localStorage.setItem('na_email', email);
+    enterApp();
+  } catch (err) {
+    msgEl.className = 'error-msg';
+    msgEl.textContent = err.message;
+  }
+}
+
+function logout() {
+  token = null;
+  localStorage.removeItem('na_token');
+  localStorage.removeItem('na_email');
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('appShell').classList.remove('visible');
+}
+
+// ── API helpers ──────────────────────
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...opts.headers }
+  });
+  if (res.status === 401) { logout(); throw new Error('Session expired'); }
+  return res;
+}
+
+// ── App Entry ────────────────────────
+async function enterApp() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('appShell').classList.add('visible');
+  document.getElementById('userEmail').textContent = userEmailStr;
+  await loadWorkspaces();
+}
+
+async function loadWorkspaces() {
+  const res = await apiFetch('/workspaces');
+  workspaces = await res.json();
+  renderWorkspaces();
+  if (workspaces.length > 0) selectWorkspace(workspaces[0]);
+}
+
+function renderWorkspaces() {
+  const el = document.getElementById('workspaceList');
+  el.innerHTML = workspaces.map(ws => `
+    <div class="workspace-item ${activeWs && activeWs.id === ws.id ? 'active' : ''}"
+         onclick="selectWorkspace(${JSON.stringify(ws).replace(/"/g, '&quot;')})">
+      <div class="ws-icon">📁</div>
+      <span>${esc(ws.name)}</span>
+      <div class="ws-actions">
+        <button class="ws-action-btn" title="Rename" onclick="event.stopPropagation(); renameWorkspace('${ws.id}', '${esc(ws.name)}')">✎</button>
+        <button class="ws-action-btn delete" title="Delete" onclick="event.stopPropagation(); deleteWorkspace('${ws.id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function selectWorkspace(ws) {
+  activeWs = ws;
+  renderWorkspaces();
+  document.getElementById('wsTitle').textContent = ws.name;
+  await loadNotes();
+}
+
+async function createWorkspace() {
+  const name = prompt('Workspace name:');
+  if (!name || !name.trim()) return;
+  await apiFetch('/workspaces', {
+    method: 'POST',
+    body: JSON.stringify({ name: name.trim() })
+  });
+  await loadWorkspaces();
+}
+
+async function renameWorkspace(id, currentName) {
+  const name = prompt('Rename workspace:', currentName);
+  if (!name || !name.trim() || name.trim() === currentName) return;
+  await apiFetch(`/workspaces/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name: name.trim() })
+  });
+  await loadWorkspaces();
+}
+
+async function deleteWorkspace(id) {
+  if (!confirm('Delete this workspace and all its notes?')) return;
+  try {
+    const res = await apiFetch(`/workspaces/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.detail || 'Failed to delete');
+      return;
+    }
+    activeWs = null;
+    await loadWorkspaces();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// ── Notes ────────────────────────────
+async function loadNotes() {
+  const area = document.getElementById('notesArea');
+  area.innerHTML = '<div class="loading-center"><div class="spinner"></div></div>';
+
+  const res = await apiFetch(`/workspaces/${activeWs.id}/notes`);
+  notes = await res.json();
+
+  document.getElementById('noteCount').textContent = notes.length ? `${notes.length} note${notes.length > 1 ? 's' : ''}` : '';
+
+  if (notes.length === 0) {
+    area.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h3>No notes yet</h3>
+        <p>Create your first note to get started</p>
+      </div>`;
+    return;
+  }
+
+  area.innerHTML = `<div class="notes-grid">${notes.map(renderNoteCard).join('')}</div>`;
+}
+
+function renderNoteCard(n) {
+  const date = new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `
+    <div class="note-card" onclick='openNoteModal(${JSON.stringify(n).replace(/'/g, "&#39;")})'>
+      <div class="note-title">${esc(n.title)}</div>
+      <div class="note-preview">${esc(n.raw_text)}</div>
+      <div class="note-meta">
+        <span class="note-status status-${n.status}">${n.status}</span>
+        <span class="note-date">${date}</span>
+      </div>
+    </div>`;
+}
+
+// ── Modal ────────────────────────────
+function openNoteModal(note = null) {
+  editingNoteId = note ? note.id : null;
+  document.getElementById('modalTitle').textContent = note ? 'Edit Note' : 'New Note';
+  document.getElementById('noteTitle').value = note ? note.title : '';
+  document.getElementById('noteContent').value = note ? note.raw_text : '';
+  document.getElementById('deleteNoteBtn').style.display = note ? 'inline-flex' : 'none';
+  document.getElementById('noteModal').classList.add('visible');
+  setTimeout(() => document.getElementById('noteTitle').focus(), 100);
+}
+
+function closeNoteModal() {
+  document.getElementById('noteModal').classList.remove('visible');
+  editingNoteId = null;
+}
+
+function closeModalOnOverlay(e) {
+  if (e.target === e.currentTarget) closeNoteModal();
+}
+
+async function saveNote() {
+  const title = document.getElementById('noteTitle').value.trim();
+  const raw_text = document.getElementById('noteContent').value;
+  if (!title) { alert('Title is required'); return; }
+
+  if (editingNoteId) {
+    await apiFetch(`/workspaces/${activeWs.id}/notes/${editingNoteId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title, raw_text })
+    });
+  } else {
+    await apiFetch(`/workspaces/${activeWs.id}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ title, raw_text })
+    });
+  }
+
+  closeNoteModal();
+  await loadNotes();
+}
+
+async function deleteNote() {
+  if (!confirm('Delete this note?')) return;
+  await apiFetch(`/workspaces/${activeWs.id}/notes/${editingNoteId}`, { method: 'DELETE' });
+  closeNoteModal();
+  await loadNotes();
+}
+
+// ── Utils ────────────────────────────
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Init ─────────────────────────────
+if (token) {
+  enterApp();
+}
+</script>
+</body>
+</html>
