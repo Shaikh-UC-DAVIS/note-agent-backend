@@ -40,68 +40,6 @@ Interactive docs at **http://localhost:8000/docs**
 | PATCH | `/workspaces/{id}/notes/{note_id}` | Update a note |
 | DELETE | `/workspaces/{id}/notes/{note_id}` | Delete a note |
 
-## Demo Walkthrough
-
-### 1. Register a user
-
-```bash
-curl -s -X POST http://localhost:8000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@example.com","password":"password123"}' | python3 -m json.tool
-```
-
-### 2. Login (get token)
-
-```bash
-TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
-  -d "username=demo@example.com&password=password123" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
-
-echo $TOKEN
-```
-
-### 3. List workspaces
-
-```bash
-curl -s http://localhost:8000/workspaces \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-```
-
-### 4. Create a note
-
-```bash
-WS_ID="<workspace-id-from-step-3>"
-
-curl -s -X POST "http://localhost:8000/workspaces/$WS_ID/notes" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"My First Note","raw_text":"This is a test note."}' | python3 -m json.tool
-```
-
-### 5. List notes
-
-```bash
-curl -s "http://localhost:8000/workspaces/$WS_ID/notes" \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-```
-
-### 6. Update a note
-
-```bash
-NOTE_ID="<note-id-from-step-4>"
-
-curl -s -X PATCH "http://localhost:8000/workspaces/$WS_ID/notes/$NOTE_ID" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Updated Title","raw_text":"Updated content."}' | python3 -m json.tool
-```
-
-### 7. Delete a note
-
-```bash
-curl -s -X DELETE "http://localhost:8000/workspaces/$WS_ID/notes/$NOTE_ID" \
-  -H "Authorization: Bearer $TOKEN" -w "%{http_code}\n"
-```
-
 ## Tech Stack
 
 - **FastAPI** – async Python web framework
@@ -110,6 +48,3 @@ curl -s -X DELETE "http://localhost:8000/workspaces/$WS_ID/notes/$NOTE_ID" \
 - **JWT** – authentication
 - **Docker Compose** – orchestration
 
-## Schema
-
-Implements the `users`, `workspaces`, and `notes` tables from the Note Agent spec, with workspace-level row access control.
