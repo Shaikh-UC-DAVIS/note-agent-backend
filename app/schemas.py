@@ -59,3 +59,47 @@ class NoteOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ── Task ──────────────────────────────────────────────
+from datetime import date  # add at top if you prefer, but this works here too
+
+class TaskCreate(BaseModel):
+    workspace_id: UUID
+    title: str = Field(max_length=500)
+
+    # optional metadata
+    description: str | None = None
+    status: str = Field(default="todo")  # adjust if you use other statuses
+    due_date: date | None = None
+
+    # optional links (only if your DB/model has these columns)
+    user_id: UUID | None = None
+    note_id: UUID | None = None
+
+
+class TaskUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=500)
+    description: str | None = None
+    status: str | None = None
+    due_date: date | None = None
+
+    user_id: UUID | None = None
+    note_id: UUID | None = None
+
+
+class TaskOut(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    title: str
+    description: str | None
+    status: str
+    due_date: date | None
+
+    user_id: UUID | None
+    note_id: UUID | None
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
