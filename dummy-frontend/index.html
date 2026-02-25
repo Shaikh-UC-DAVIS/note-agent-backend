@@ -1,0 +1,243 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Note Agent – Dummy Tasks UI</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+      input, select, button { padding: 8px; margin: 4px 0; }
+      .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-top: 12px; }
+      .tasks { margin-top: 12px; }
+      .task { border: 1px solid #eee; border-radius: 10px; padding: 10px; margin: 8px 0; }
+      .muted { color: #666; font-size: 12px; }
+      pre { background: #111; color: #0f0; padding: 10px; border-radius: 10px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h2>Dummy Frontend – Tasks</h2>
+    <div class="muted">API base: <span id="apiBaseLabel"></span></div>
+
+    <div class="card">
+      <h3>Auth</h3>
+      <div class="row">
+        <input id="email" placeholder="email" size="28" />
+        <input id="password" placeholder="password" type="password" size="20" />
+      </div>
+      <div class="row">
+        <button id="registerBtn">Register</button>
+        <button id="loginBtn">Login</button>
+        <button id="logoutBtn">Logout</button>
+      </div>
+      <div class="muted">Token: <span id="tokenStatus"></span></div>
+    </div>
+
+    <div class="card">
+      <h3>Workspace</h3>
+      <div class="row">
+        <button id="loadWorkspacesBtn">Load workspaces</button>
+        <select id="workspaceSelect"></select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Create Task</h3>
+      <div class="row">
+        <input id="taskTitle" placeholder="Task title" size="40" />
+        <input id="taskDue" type="date" />
+        <select id="taskStatus">
+          <option value="todo">todo</option>
+          <option value="in_progress">in_progress</option>
+          <option value="done">done</option>
+        </select>
+      </div>
+      <div class="row">
+        <input id="taskDesc" placeholder="Description (optional)" size="60" />
+      </div>
+      <div class="row">
+        <button id="createTaskBtn">Create</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Tasks</h3>
+      <div class="row">
+        <button id="refreshTasksBtn">Refresh tasks for selected workspace</button>
+      </div>
+      <div class="tasks" id="tasks"></div>
+    </div>
+
+    <h3>Debug</h3>
+    <pre id="debug"></pre>
+
+    <script>
+      // If your API runs elsewhere, change this:
+      const API_BASE = "http://localhost:8000";
+      document.getElementById("apiBaseLabel").textContent = API_BASE;
+
+      const debugEl = document.getElementById("debug");
+      const tokenKey = "dummy_token";
+
+      function setDebug(obj) {
+        debugEl.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+      }
+
+      function getToken() {
+        return localStorage.getItem(tokenKey);
+      }
+
+      function setToken(t) {
+        if (t) localStorage.setItem(tokenKey, t);
+        else localStorage.removeItem(tokenKey);
+        renderTokenStatus();
+      }
+
+      function renderTokenStatus() {
+        const t = getToken();
+        document.getElementById("tokenStatus").textContent = t ? "set" : "not set";
+      }
+
+      async function api(path, { method="GET", headers={}, body=null } = {}) {
+        const t = getToken();
+        const h = { ...headers };
+        if (t) h["Authorization"] = `Bearer ${t}`;
+        if (body && !(body instanceof FormData)) h["Content-Type"] = "application/json";
+
+        const res = await fetch(`${API_BASE}${path}`, {
+          method,
+          headers: h,
+          body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : null
+        });
+
+        const text = await res.text();
+        let data = null;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+        if (!res.ok) throw { status: res.status, data };
+        return data;
+      }
+
+      // --- Auth ---
+      async function register() {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const out = await api("/auth/register", { method: "POST", body: { email, password }});
+        setDebug({ registered: out });
+      }
+
+      async function login() {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        // Many FastAPI OAuth2PasswordRequestForm endpoints expect form-data, not JSON
+        const fd = new FormData();
+        fd.append("username", email);
+        fd.append("password", password);
+
+        const tok = await api("/auth/login", { method: "POST", body: fd });
+        setToken(tok.access_token);
+        setDebug({ token: tok });
+      }
+
+      function logout() {
+        setToken(null);
+        setDebug("logged out");
+      }
+
+      // --- Workspaces ---
+      async function loadWorkspaces() {
+        const ws = await api("/workspaces");
+        const sel = document.getElementById("workspaceSelect");
+        sel.innerHTML = "";
+        ws.forEach(w => {
+          const opt = document.createElement("option");
+          opt.value = w.id;
+          opt.textContent = `${w.name} (${w.id.slice(0,8)}…)`;
+          sel.appendChild(opt);
+        });
+        setDebug({ workspaces: ws });
+      }
+
+      function getSelectedWorkspaceId() {
+        const sel = document.getElementById("workspaceSelect");
+        return sel.value || null;
+      }
+
+      // --- Tasks ---
+      async function refreshTasks() {
+        const wid = getSelectedWorkspaceId();
+        if (!wid) throw new Error("Select a workspace first.");
+        // Your routes use GET /tasks?workspace_id=...
+        const tasks = await api(`/tasks?workspace_id=${encodeURIComponent(wid)}`);
+        renderTasks(tasks);
+        setDebug({ tasks });
+      }
+
+      async function createTask() {
+        const wid = getSelectedWorkspaceId();
+        if (!wid) throw new Error("Select a workspace first.");
+
+        const title = document.getElementById("taskTitle").value.trim();
+        const description = document.getElementById("taskDesc").value.trim() || null;
+        const status = document.getElementById("taskStatus").value;
+        const due_date = document.getElementById("taskDue").value || null;
+
+        const payload = { workspace_id: wid, title, description, status, due_date };
+        const created = await api("/tasks/", { method: "POST", body: payload });
+        setDebug({ created });
+        await refreshTasks();
+      }
+
+      async function patchTask(taskId, patch) {
+        const updated = await api(`/tasks/${taskId}`, { method: "PATCH", body: patch });
+        setDebug({ updated });
+        await refreshTasks();
+      }
+
+      async function deleteTask(taskId) {
+        await api(`/tasks/${taskId}`, { method: "DELETE" });
+        setDebug({ deleted: taskId });
+        await refreshTasks();
+      }
+
+      function renderTasks(tasks) {
+        const container = document.getElementById("tasks");
+        container.innerHTML = "";
+        tasks.forEach(t => {
+          const div = document.createElement("div");
+          div.className = "task";
+          div.innerHTML = `
+            <div><b>${t.title}</b> <span class="muted">(${t.status})</span></div>
+            <div class="muted">id: ${t.id}</div>
+            <div class="muted">due: ${t.due_date ?? "—"} | note: ${t.note_id ?? "—"}</div>
+            <div class="row" style="margin-top:8px;">
+              <button data-act="done">Mark done</button>
+              <button data-act="todo">Mark todo</button>
+              <button data-act="setdue">Set due = today</button>
+              <button data-act="del">Delete</button>
+            </div>
+          `;
+          div.querySelector('[data-act="done"]').onclick = () => patchTask(t.id, { status: "done" });
+          div.querySelector('[data-act="todo"]').onclick = () => patchTask(t.id, { status: "todo" });
+
+          const today = new Date().toISOString().slice(0,10);
+          div.querySelector('[data-act="setdue"]').onclick = () => patchTask(t.id, { due_date: today });
+
+          div.querySelector('[data-act="del"]').onclick = () => deleteTask(t.id);
+          container.appendChild(div);
+        });
+      }
+
+      // Wire buttons
+      document.getElementById("registerBtn").onclick = () => register().catch(e => setDebug(e));
+      document.getElementById("loginBtn").onclick = () => login().catch(e => setDebug(e));
+      document.getElementById("logoutBtn").onclick = () => logout();
+
+      document.getElementById("loadWorkspacesBtn").onclick = () => loadWorkspaces().catch(e => setDebug(e));
+      document.getElementById("refreshTasksBtn").onclick = () => refreshTasks().catch(e => setDebug(e));
+      document.getElementById("createTaskBtn").onclick = () => createTask().catch(e => setDebug(e));
+
+      renderTokenStatus();
+      setDebug("1) Register or Login\n2) Load workspaces\n3) Select workspace\n4) Create/Refresh tasks");
+    </script>
+  </body>
+</html>
