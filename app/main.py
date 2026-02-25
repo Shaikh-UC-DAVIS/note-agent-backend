@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,6 +10,8 @@ from app.database import engine
 from app.models import Base
 from app.routes_auth import router as auth_router
 from app.routes_notes import router as notes_router
+from app.routes_tasks import router as tasks_router
+
 
 
 @asynccontextmanager
@@ -35,6 +38,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(notes_router)
+app.include_router(tasks_router)
 
 
 @app.get("/health")
@@ -47,4 +51,8 @@ async def root():
     return FileResponse("/app/static/index.html")
 
 
-app.mount("/static", StaticFiles(directory="/app/static"), name="static")
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"  # project_root/static
+
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
