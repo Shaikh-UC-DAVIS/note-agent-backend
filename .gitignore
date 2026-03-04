@@ -1,0 +1,6 @@
+
+# macOS + Python junk
+.DS_Store
+__pycache__/
+*.pyc
+dummy-frontend/
