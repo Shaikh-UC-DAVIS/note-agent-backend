@@ -500,10 +500,136 @@
     border-radius: 4px;
   }
 
-  .status-created { background: var(--accent-glow); color: var(--accent); }
-  .status-ready { background: var(--green-dim); color: var(--green); }
-  .status-processing { background: rgba(255,212,121,0.12); color: var(--yellow); }
-  .status-error { background: var(--red-dim); color: var(--red); }
+  .status-created    { background: var(--accent-glow); color: var(--accent); }
+  .status-chunked,
+  .status-extracted,
+  .status-embedded,
+  .status-structured,
+  .status-resolved   { background: rgba(255,212,121,0.12); color: var(--yellow); }
+  .status-ready      { background: var(--green-dim); color: var(--green); }
+  .status-error      { background: var(--red-dim); color: var(--red); }
+
+  .note-card .note-status::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .status-chunked::before,
+  .status-extracted::before,
+  .status-embedded::before,
+  .status-structured::before,
+  .status-resolved::before {
+    animation: pulse 1.2s infinite ease-in-out;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* ── Insights drawer inside modal ── */
+  .insights-drawer {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .insights-drawer h4 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .insights-drawer h4 .count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--surface-active);
+    padding: 2px 8px; border-radius: 10px;
+  }
+  .obj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 8px; margin-bottom: 18px; }
+  .obj-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .obj-type {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .obj-type-Idea       { background: rgba(196,161,255,0.15); color: var(--accent); }
+  .obj-type-Claim      { background: rgba(126,232,168,0.12); color: var(--green); }
+  .obj-type-Assumption { background: rgba(255,212,121,0.12); color: var(--yellow); }
+  .obj-type-Question   { background: rgba(136,136,160,0.18); color: var(--text-muted); }
+  .obj-type-Task       { background: rgba(121,192,255,0.14); color: #79c0ff; }
+  .obj-type-Evidence   { background: rgba(255,179,71,0.14); color: #ffb347; }
+  .obj-type-Definition { background: rgba(180,255,200,0.12); color: #b4ffc8; }
+  .obj-text { color: var(--text); }
+  .obj-conf { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+
+  .link-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .link-src, .link-dst { flex: 1; color: var(--text); }
+  .link-dst { text-align: right; }
+  .link-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .link-type-Supports    { background: rgba(126,232,168,0.14); color: var(--green); }
+  .link-type-Contradicts { background: rgba(255,123,138,0.14); color: var(--red); }
+  .link-type-Refines     { background: rgba(196,161,255,0.14); color: var(--accent); }
+  .link-type-DependsOn   { background: rgba(121,192,255,0.14); color: #79c0ff; }
+  .link-type-SameAs      { background: rgba(136,136,160,0.18); color: var(--text-muted); }
+  .link-type-Causes      { background: rgba(255,212,121,0.14); color: var(--yellow); }
+
+  .insight-card {
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    background: var(--surface);
+    font-size: 13px;
+  }
+  .insight-card.sev-high { border-color: rgba(255,123,138,0.4); background: rgba(255,123,138,0.06); }
+  .insight-card.sev-medium { border-color: rgba(255,212,121,0.35); background: rgba(255,212,121,0.05); }
+  .insight-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .insight-head .sev { padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+  .sev-high .sev  { background: var(--red-dim); color: var(--red); }
+  .sev-medium .sev{ background: rgba(255,212,121,0.14); color: var(--yellow); }
+  .sev-low .sev   { background: var(--surface-active); color: var(--text-muted); }
+  .insight-body { color: var(--text); line-height: 1.5; }
+  .insight-body .quote {
+    display: block;
+    padding-left: 10px;
+    margin: 4px 0;
+    border-left: 2px solid var(--border-light);
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .insights-empty { color: var(--text-dim); font-size: 13px; text-align: center; padding: 16px 0; }
 
   .note-card .note-date {
     font-size: 12px;
@@ -748,6 +874,7 @@
         <label>Content</label>
         <textarea id="noteContent" placeholder="Write your thoughts here..."></textarea>
       </div>
+      <div id="insightsDrawer" class="insights-drawer" style="display:none"></div>
     </div>
     <div class="modal-footer">
       <div>
@@ -936,6 +1063,29 @@ async function loadNotes() {
   }
 
   area.innerHTML = `<div class="notes-grid">${notes.map(renderNoteCard).join('')}</div>`;
+  schedulePoll();
+}
+
+const TERMINAL_STATUSES = new Set(['ready', 'error']);
+let pollTimer = null;
+function schedulePoll() {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  const anyProcessing = notes.some(n => !TERMINAL_STATUSES.has(n.status));
+  if (!anyProcessing || !activeWs) return;
+  pollTimer = setTimeout(async () => {
+    if (!activeWs) return;
+    try {
+      const res = await apiFetch(`/workspaces/${activeWs.id}/notes`);
+      const fresh = await res.json();
+      const changed = fresh.some((n, i) => !notes[i] || notes[i].status !== n.status);
+      notes = fresh;
+      if (changed) {
+        const area = document.getElementById('notesArea');
+        area.innerHTML = `<div class="notes-grid">${notes.map(renderNoteCard).join('')}</div>`;
+      }
+    } catch {}
+    schedulePoll();
+  }, 3000);
 }
 
 function renderNoteCard(n) {
@@ -952,6 +1102,7 @@ function renderNoteCard(n) {
 }
 
 // ── Modal ────────────────────────────
+let modalPollTimer = null;
 function openNoteModal(note = null) {
   editingNoteId = note ? note.id : null;
   document.getElementById('modalTitle').textContent = note ? 'Edit Note' : 'New Note';
@@ -960,11 +1111,137 @@ function openNoteModal(note = null) {
   document.getElementById('deleteNoteBtn').style.display = note ? 'inline-flex' : 'none';
   document.getElementById('noteModal').classList.add('visible');
   setTimeout(() => document.getElementById('noteTitle').focus(), 100);
+
+  const drawer = document.getElementById('insightsDrawer');
+  if (note) {
+    drawer.style.display = 'block';
+    drawer.innerHTML = '<div class="insights-empty">Loading extracted knowledge…</div>';
+    loadInsights(note.id);
+  } else {
+    drawer.style.display = 'none';
+    drawer.innerHTML = '';
+  }
 }
 
 function closeNoteModal() {
   document.getElementById('noteModal').classList.remove('visible');
   editingNoteId = null;
+  if (modalPollTimer) { clearTimeout(modalPollTimer); modalPollTimer = null; }
+}
+
+async function loadInsights(noteId) {
+  if (modalPollTimer) { clearTimeout(modalPollTimer); modalPollTimer = null; }
+  try {
+    const res = await apiFetch(`/workspaces/${activeWs.id}/notes/${noteId}/insights`);
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    renderInsights(data);
+    if (editingNoteId === noteId && !TERMINAL_STATUSES.has(data.note.status)) {
+      modalPollTimer = setTimeout(() => loadInsights(noteId), 3000);
+    }
+  } catch {
+    document.getElementById('insightsDrawer').innerHTML =
+      '<div class="insights-empty">Could not load insights.</div>';
+  }
+}
+
+function renderInsights(data) {
+  const drawer = document.getElementById('insightsDrawer');
+  const status = data.note.status;
+  const processing = !TERMINAL_STATUSES.has(status);
+  const err = data.note.error_message
+    ? `<div class="insight-card sev-high"><div class="insight-head"><span class="sev">error</span></div><div class="insight-body">${esc(data.note.error_message)}</div></div>`
+    : '';
+
+  const pipelineLabel = {
+    created: 'Queued for processing…',
+    chunked: 'Chunking text…',
+    extracted: 'Extracting structure…',
+    embedded: 'Generating embeddings… running LLM extraction',
+    structured: 'Detecting insights…',
+    resolved: 'Finalizing…',
+    ready: 'Ready',
+    error: 'Error',
+  }[status] || status;
+
+  if (processing && data.objects.length === 0) {
+    drawer.innerHTML = `
+      <h4>Pipeline <span class="count">${esc(status)}</span></h4>
+      <div class="insights-empty">${esc(pipelineLabel)}</div>
+      ${err}
+    `;
+    return;
+  }
+
+  const objById = {};
+  data.objects.forEach(o => { objById[o.id] = o; });
+  const objByType = {};
+  data.objects.forEach(o => {
+    (objByType[o.type] = objByType[o.type] || []).push(o);
+  });
+  const TYPE_ORDER = ['Idea','Claim','Assumption','Question','Task','Evidence','Definition'];
+  const objHtml = TYPE_ORDER.filter(t => objByType[t]).map(t => `
+    <div style="margin-bottom:10px;"><div class="obj-type obj-type-${t}">${t} · ${objByType[t].length}</div></div>
+    <div class="obj-grid">${objByType[t].map(o => `
+      <div class="obj-card">
+        <div class="obj-text">${esc(o.canonical_text)}</div>
+        ${o.confidence != null ? `<div class="obj-conf">confidence ${(o.confidence*100).toFixed(0)}%</div>` : ''}
+      </div>
+    `).join('')}</div>
+  `).join('');
+
+  const linksHtml = data.links.map(l => {
+    const s = objById[l.src_object_id];
+    const d = objById[l.dst_object_id];
+    if (!s || !d) return '';
+    return `
+      <div class="link-row">
+        <div class="link-src">${esc(s.canonical_text.slice(0,60))}${s.canonical_text.length>60?'…':''}</div>
+        <span class="link-type link-type-${l.type}">${l.type}</span>
+        <div class="link-dst">${esc(d.canonical_text.slice(0,60))}${d.canonical_text.length>60?'…':''}</div>
+      </div>`;
+  }).join('');
+
+  const insightsHtml = data.insights.map(i => {
+    const p = i.payload || {};
+    const sevClass = `sev-${i.severity || 'low'}`;
+    let body = '';
+    if (i.type === 'contradiction') {
+      body = `
+        <div class="insight-body">
+          <span class="quote">${esc(p.source_text || '')}</span>
+          <span class="quote">${esc(p.target_text || '')}</span>
+        </div>`;
+    } else if (i.type === 'stale_thread') {
+      body = `
+        <div class="insight-body">
+          ${p.claim1_text ? `<span class="quote">${esc(p.claim1_text)}</span>` : ''}
+          ${p.claim2_text ? `<span class="quote">${esc(p.claim2_text)}</span>` : ''}
+        </div>`;
+    } else {
+      body = `<div class="insight-body">${esc(JSON.stringify(p))}</div>`;
+    }
+    return `
+      <div class="insight-card ${sevClass}">
+        <div class="insight-head"><span class="sev">${esc(i.severity || '')}</span><span>${esc(i.type)}</span></div>
+        ${body}
+      </div>`;
+  }).join('');
+
+  drawer.innerHTML = `
+    <h4>Pipeline <span class="count">${esc(status)}</span></h4>
+    ${processing ? `<div class="insights-empty">${esc(pipelineLabel)}</div>` : ''}
+    ${err}
+
+    <h4>Objects <span class="count">${data.objects.length}</span></h4>
+    ${data.objects.length ? objHtml : '<div class="insights-empty">No objects extracted yet.</div>'}
+
+    <h4>Links <span class="count">${data.links.length}</span></h4>
+    ${data.links.length ? linksHtml : '<div class="insights-empty">No links extracted yet.</div>'}
+
+    <h4>Insights <span class="count">${data.insights.length}</span></h4>
+    ${data.insights.length ? insightsHtml : '<div class="insights-empty">No insights yet.</div>'}
+  `;
 }
 
 function closeModalOnOverlay(e) {

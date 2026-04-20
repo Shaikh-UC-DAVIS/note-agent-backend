@@ -21,13 +21,19 @@ from sqlalchemy import (
     ForeignKey,
     Enum as SAEnum,
     JSON,
+    Integer,
+    Float,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, declarative_base
+from pgvector.sqlalchemy import Vector
 
 
 def utcnow():
     return datetime.now(timezone.utc)
+
+
+EMBEDDING_DIM = 384
 
 
 class User(Base):
@@ -65,10 +71,34 @@ class Workspace(Base):
 
 NOTE_STATUS = SAEnum(
     "created",
-    "processing",
+    "extracted",
+    "chunked",
+    "embedded",
+    "structured",
+    "resolved",
     "ready",
     "error",
     name="note_status",
+    create_type=True,
+)
+
+OBJECT_TYPE = SAEnum(
+    "Idea", "Claim", "Assumption", "Question",
+    "Task", "Evidence", "Definition",
+    name="object_type",
+    create_type=True,
+)
+
+LINK_TYPE = SAEnum(
+    "Supports", "Contradicts", "Refines",
+    "DependsOn", "SameAs", "Causes",
+    name="link_type",
+    create_type=True,
+)
+
+INSIGHT_TYPE = SAEnum(
+    "contradiction", "stale_thread", "consolidation_opportunity",
+    name="insight_type",
     create_type=True,
 )
 
@@ -84,12 +114,15 @@ class Note(Base):
     )
     title = Column(String(500), nullable=False)
     raw_text = Column(Text, nullable=False, default="")
+    cleaned_text = Column(Text, nullable=True)
     content_hash = Column(String(64), nullable=True)
     status = Column(NOTE_STATUS, nullable=False, server_default="created")
+    error_message = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     workspace = relationship("Workspace", back_populates="notes")
+    spans = relationship("Span", back_populates="note", cascade="all, delete-orphan")
 
 
 
@@ -136,3 +169,72 @@ class Task(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+    workspace = relationship("Workspace", back_populates="tasks")
+
+
+# ── ML tables ──────────────────────────────────────────────────────────────
+class Span(Base):
+    __tablename__ = "spans"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    note_id = Column(UUID(as_uuid=True), ForeignKey("notes.id", ondelete="CASCADE"), nullable=False, index=True)
+    chunk_index = Column(Integer, nullable=False)
+    start_char = Column(Integer, nullable=False)
+    end_char = Column(Integer, nullable=False)
+    text = Column(Text, nullable=False)
+    token_count = Column(Integer, nullable=False, default=0)
+    embedding = Column(Vector(EMBEDDING_DIM), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+
+    note = relationship("Note", back_populates="spans")
+
+
+class Object(Base):
+    __tablename__ = "objects"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    type = Column(OBJECT_TYPE, nullable=False)
+    canonical_text = Column(Text, nullable=False)
+    confidence = Column(Float, nullable=True)
+    status = Column(String(64), nullable=False, default="active")
+    embedding = Column(Vector(EMBEDDING_DIM), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+
+
+class ObjectMention(Base):
+    __tablename__ = "object_mentions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    object_id = Column(UUID(as_uuid=True), ForeignKey("objects.id", ondelete="CASCADE"), nullable=False)
+    span_id = Column(UUID(as_uuid=True), ForeignKey("spans.id", ondelete="CASCADE"), nullable=False)
+    note_id = Column(UUID(as_uuid=True), ForeignKey("notes.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String(64), nullable=False, default="primary")
+    confidence = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+
+
+class Link(Base):
+    __tablename__ = "links"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    src_object_id = Column(UUID(as_uuid=True), ForeignKey("objects.id", ondelete="CASCADE"), nullable=False)
+    dst_object_id = Column(UUID(as_uuid=True), ForeignKey("objects.id", ondelete="CASCADE"), nullable=False)
+    type = Column(LINK_TYPE, nullable=False)
+    confidence = Column(Float, nullable=True)
+    evidence_span_id = Column(UUID(as_uuid=True), ForeignKey("spans.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+
+
+class Insight(Base):
+    __tablename__ = "insights"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    type = Column(INSIGHT_TYPE, nullable=False)
+    severity = Column(String(16), nullable=True)
+    status = Column(String(32), nullable=False, default="new")
+    payload = Column(JSONB, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
