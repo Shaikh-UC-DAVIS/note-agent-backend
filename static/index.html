@@ -791,6 +791,130 @@
     justify-content: center;
     padding: 60px;
   }
+
+  /* ── Chat modal ── */
+  .btn-chat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-right: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-chat:hover { background: var(--surface-hover); border-color: var(--border-light); }
+  .btn-chat .chat-icon { color: var(--accent); }
+
+  .chat-modal { width: min(720px, 92vw); max-height: 86vh; display: flex; flex-direction: column; }
+  .chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 28px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-empty {
+    color: var(--text-dim);
+    text-align: center;
+    padding: 48px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .chat-empty .hint { display: block; margin-top: 8px; color: var(--text-muted); font-size: 12px; }
+
+  .msg { margin-bottom: 18px; display: flex; flex-direction: column; max-width: 100%; }
+  .msg.user { align-items: flex-end; }
+  .msg.assistant { align-items: flex-start; }
+  .msg .bubble {
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    max-width: 86%;
+    word-wrap: break-word;
+  }
+  .msg.user .bubble {
+    background: var(--accent-glow);
+    border: 1px solid var(--accent-dim);
+    color: var(--text);
+    border-bottom-right-radius: 4px;
+  }
+  .msg.assistant .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.assistant.thinking .bubble { color: var(--text-dim); font-style: italic; }
+
+  .citations { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .cite-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface-active);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cite-chip:hover { color: var(--text); border-color: var(--accent-dim); }
+  .cite-chip .sc-label { color: var(--accent); font-weight: 600; }
+
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    padding: 16px 28px;
+    background: var(--surface);
+    align-items: flex-end;
+  }
+  .chat-input-row textarea {
+    flex: 1;
+    resize: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    min-height: 42px;
+    max-height: 120px;
+    outline: none;
+  }
+  .chat-input-row textarea:focus { border-color: var(--accent-dim); }
+  .chat-input-row button {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .chat-input-row button:hover:not(:disabled) { background: var(--accent-dim); color: var(--text); }
+  .chat-input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -848,9 +972,14 @@
         <h2 id="wsTitle">Notes</h2>
         <span class="note-count" id="noteCount"></span>
       </div>
-      <button class="btn-new-note" onclick="openNoteModal()">
-        <span class="plus">+</span> New Note
-      </button>
+      <div>
+        <button class="btn-chat" onclick="openChatModal()">
+          <span class="chat-icon">💬</span> Chat
+        </button>
+        <button class="btn-new-note" onclick="openNoteModal()">
+          <span class="plus">+</span> New Note
+        </button>
+      </div>
     </div>
     <div class="notes-area" id="notesArea">
       <div class="loading-center"><div class="spinner"></div></div>
@@ -884,6 +1013,26 @@
         <button class="btn btn-ghost" onclick="closeNoteModal()">Cancel</button>
         <button class="btn btn-primary" style="width:auto;padding:10px 24px;" onclick="saveNote()">Save</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ CHAT MODAL ════════════════ -->
+<div class="modal-overlay" id="chatModal" onclick="closeChatOnOverlay(event)">
+  <div class="modal chat-modal">
+    <div class="modal-header">
+      <h3>Chat with your notes</h3>
+      <button class="modal-close" onclick="closeChatModal()">✕</button>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="chat-empty">
+        Ask anything about what you've written in <strong id="chatWsName">this workspace</strong>.
+        <span class="hint">Answers are grounded in your notes and cite the spans they came from.</span>
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <textarea id="chatInput" placeholder="Ask a question…" rows="1" onkeydown="chatInputKey(event)"></textarea>
+      <button id="chatSendBtn" onclick="sendChat()">Send</button>
     </div>
   </div>
 </div>
@@ -1274,6 +1423,110 @@ async function deleteNote() {
   await apiFetch(`/workspaces/${activeWs.id}/notes/${editingNoteId}`, { method: 'DELETE' });
   closeNoteModal();
   await loadNotes();
+}
+
+// ── Chat ─────────────────────────────
+let chatHistory = [];  // [{role, content}]
+let chatBusy = false;
+
+function openChatModal() {
+  if (!activeWs) { alert('Open a workspace first.'); return; }
+  document.getElementById('chatWsName').textContent = activeWs.name || 'this workspace';
+  document.getElementById('chatModal').classList.add('visible');
+  setTimeout(() => document.getElementById('chatInput').focus(), 50);
+}
+
+function closeChatModal() {
+  document.getElementById('chatModal').classList.remove('visible');
+}
+
+function closeChatOnOverlay(e) {
+  if (e.target.id === 'chatModal') closeChatModal();
+}
+
+function chatInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+function renderChat() {
+  const body = document.getElementById('chatBody');
+  if (!chatHistory.length && !chatBusy) {
+    body.innerHTML = `<div class="chat-empty">
+        Ask anything about what you've written in <strong>${esc(activeWs?.name || 'this workspace')}</strong>.
+        <span class="hint">Answers are grounded in your notes and cite the spans they came from.</span>
+      </div>`;
+    return;
+  }
+  const parts = chatHistory.map(m => {
+    if (m.role === 'user') {
+      return `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>`;
+    }
+    const cites = (m.sources || []).map(s => {
+      const label = esc((s.note_title || 'note').slice(0, 28));
+      const prev = esc(s.preview || '');
+      return `<span class="cite-chip" title="${prev}" onclick="openNoteById('${s.note_id}')">
+          <span class="sc-label">S#</span>${label}
+        </span>`;
+    }).join('');
+    return `<div class="msg assistant">
+        <div class="bubble">${esc(m.content)}</div>
+        ${cites ? `<div class="citations">${cites}</div>` : ''}
+      </div>`;
+  });
+  if (chatBusy) parts.push('<div class="msg assistant thinking"><div class="bubble">Thinking…</div></div>');
+  body.innerHTML = parts.join('');
+  body.scrollTop = body.scrollHeight;
+}
+
+async function sendChat() {
+  if (chatBusy) return;
+  const input = document.getElementById('chatInput');
+  const question = input.value.trim();
+  if (!question) return;
+
+  chatHistory.push({ role: 'user', content: question });
+  input.value = '';
+  chatBusy = true;
+  document.getElementById('chatSendBtn').disabled = true;
+  renderChat();
+
+  try {
+    const turns = chatHistory
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .slice(-8)
+      .map(m => ({ role: m.role, content: m.content }));
+    // Drop the very last user turn (we pass it as `question`)
+    turns.pop();
+
+    const res = await apiFetch(`/workspaces/${activeWs.id}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ question, history: turns, top_k: 6 })
+    });
+    const data = await res.json();
+    chatHistory.push({
+      role: 'assistant',
+      content: data.answer || '(no answer returned)',
+      sources: data.sources || [],
+    });
+  } catch (err) {
+    chatHistory.push({
+      role: 'assistant',
+      content: `Something went wrong: ${err.message || err}`,
+      sources: [],
+    });
+  } finally {
+    chatBusy = false;
+    document.getElementById('chatSendBtn').disabled = false;
+    renderChat();
+  }
+}
+
+async function openNoteById(noteId) {
+  const note = (notes || []).find(n => n.id === noteId);
+  if (note) {
+    closeChatModal();
+    openNoteModal(note);
+  }
 }
 
 // ── Utils ────────────────────────────

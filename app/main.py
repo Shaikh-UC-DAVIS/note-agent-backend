@@ -11,6 +11,7 @@ from app.models import Base
 from app.routes_auth import router as auth_router
 from app.routes_notes import router as notes_router
 from app.routes_tasks import router as tasks_router
+from app.routes_chat import router as chat_router
 
 
 
@@ -41,6 +42,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(notes_router)
 app.include_router(tasks_router)
+app.include_router(chat_router)
 
 
 @app.get("/health")

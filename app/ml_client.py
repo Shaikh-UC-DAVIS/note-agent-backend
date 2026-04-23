@@ -43,6 +43,39 @@ async def process_note_remote(
         return r.json()
 
 
+async def embed_remote(texts: list[str]) -> Dict[str, Any]:
+    """Call POST /ml/embed and return {vectors, model, dim}."""
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(
+            f"{ML_SERVICE_URL}/ml/embed",
+            headers=_headers(),
+            json={"texts": texts},
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def chat_remote(
+    question: str,
+    spans: list[Dict[str, str]],
+    history: list[Dict[str, str]] | None = None,
+) -> Dict[str, Any]:
+    """Call POST /ml/chat with retrieved spans and return {answer, citations, model}."""
+    payload = {
+        "question": question,
+        "spans": spans,
+        "history": history or [],
+    }
+    async with httpx.AsyncClient(timeout=ML_REQUEST_TIMEOUT) as client:
+        r = await client.post(
+            f"{ML_SERVICE_URL}/ml/chat",
+            headers=_headers(),
+            json=payload,
+        )
+        r.raise_for_status()
+        return r.json()
+
+
 async def health() -> Optional[Dict[str, Any]]:
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
