@@ -84,7 +84,7 @@ async def _get_task_or_404(
 # -------------------------
 # Routes
 # -------------------------
-@router.post("/", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
 async def create_task(
     payload: TaskCreate,
     db: AsyncSession = Depends(get_db),
@@ -94,7 +94,7 @@ async def create_task(
     return await crud_create_task(db, user_id=user.id, payload=payload)
 
 
-@router.get("/", response_model=list[TaskOut])
+@router.get("", response_model=list[TaskOut])
 async def list_tasks(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
