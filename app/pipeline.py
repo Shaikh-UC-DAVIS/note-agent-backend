@@ -81,16 +81,37 @@ async def process_note(note_id: UUID) -> None:
             await db.flush()
 
             first_span = span_rows[0].id if span_rows else None
+            obj_by_id = {o["id"]: o for o in objects_payload}
 
-            # Mentions: prefer explicit ones from ML; fall back to first-span pin.
+            def _span_for_object(obj_payload: dict, offset: int | None) -> UUID | None:
+                if first_span is None:
+                    return None
+                if offset is not None and span_rows:
+                    for sr in span_rows:
+                        if sr.start_char <= offset < sr.end_char:
+                            return sr.id
+                canonical = (obj_payload.get("canonical_text") or "").strip().lower()
+                if canonical and span_rows:
+                    probe = canonical[:60]
+                    for sr in reversed(span_rows):
+                        if probe and probe in (sr.text or "").lower():
+                            return sr.id
+                    keywords = [w for w in canonical.split() if len(w) > 4][:3]
+                    for sr in reversed(span_rows):
+                        text = (sr.text or "").lower()
+                        if keywords and all(k in text for k in keywords):
+                            return sr.id
+                return first_span
+
             if mentions_payload and first_span is not None:
                 for m in mentions_payload:
                     obj_uuid = temp_to_uuid.get(m.get("object_id"))
                     if obj_uuid is None:
                         continue
+                    obj = obj_by_id.get(m.get("object_id"), {})
                     db.add(ObjectMention(
                         object_id=obj_uuid,
-                        span_id=first_span,
+                        span_id=_span_for_object(obj, m.get("start_char")),
                         note_id=note_id,
                         role="primary",
                         confidence=None,
@@ -99,7 +120,7 @@ async def process_note(note_id: UUID) -> None:
                 for o in objects_payload:
                     db.add(ObjectMention(
                         object_id=temp_to_uuid[o["id"]],
-                        span_id=first_span,
+                        span_id=_span_for_object(o, None),
                         note_id=note_id,
                         role="primary",
                         confidence=o.get("confidence"),
