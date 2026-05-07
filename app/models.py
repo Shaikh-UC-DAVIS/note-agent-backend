@@ -42,6 +42,8 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(320), unique=True, nullable=False, index=True)
     password_hash = Column(String(128), nullable=False)
+    first_name = Column(String(120), nullable=True)
+    last_name = Column(String(120), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
     workspaces = relationship(
